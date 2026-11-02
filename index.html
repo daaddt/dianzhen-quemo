@@ -173,8 +173,7 @@ const HZK_LEN = 261696;
     var v = [], lines = [];
     for (var i = 0; i < bytes.length; i++) v.push("0x" + bytes[i].toString(16).toUpperCase().padStart(2, "0"));
     for (var s = 0; s < v.length; s += per) {
-      var seg = v.slice(s, s + per).join(",");
-      lines.push(s + per < v.length ? seg + "," : seg);
+      lines.push(v.slice(s, s + per).join(",") + ",");
     }
     return lines.join("\n");
   }
