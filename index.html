@@ -36,6 +36,11 @@ textarea:focus{border-color:#3b5573}
 .chip .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#35414f;margin-right:6px;vertical-align:1px}
 .chip.on .dot{background:var(--accent)}
 .bar{display:flex;gap:8px;margin:12px 0 14px}
+.tplbox{margin:0 0 14px;padding:10px 12px;border:1px solid #23384f;border-radius:10px;background:#0f1a28}
+.tplbox .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tplbox .lbl{font-size:12.5px;color:#8a97a8;flex:none}
+.tplbox select{flex:1 1 170px;min-width:0;background:#16233a;color:#d8e6f5;border:1px solid #2a3a51;
+  border-radius:8px;padding:8px 10px;font-size:13px}
 .btn{flex:1;min-height:44px;border-radius:11px;border:1px solid var(--line);background:var(--panel2);
   color:var(--text);font-size:14.5px;font-family:inherit;cursor:pointer;transition:.15s}
 .btn.primary{background:#1d4f7a;border-color:#2f6fa6;color:#eaf4ff}
@@ -99,6 +104,14 @@ body{-webkit-touch-callout:none}
 <div class="bar">
   <button class="btn primary" id="copyAll">复制全部</button>
   <button class="btn" id="clear">清空</button>
+</div>
+
+<div class="tplbox">
+  <div class="row">
+    <span class="lbl">模板库</span>
+    <select id="tplSel"></select>
+    <button class="btn primary" id="copyTpl">复制模板</button>
+  </div>
 </div>
 
 <div class="sum" id="sum"></div>
@@ -315,6 +328,20 @@ const HZK_LEN = 261696;
     txt.value = ""; render(); txt.focus();
   });
 
+  var TPLIB = [{ name: "51 单片机 · 16×16 点阵扫描（P0/P2 列，P1 行）", id: "tpl51scan" }];
+  var tplSel = document.getElementById("tplSel");
+  TPLIB.forEach(function (t) {
+    var o = document.createElement("option");
+    o.value = t.id;
+    o.textContent = t.name;
+    tplSel.appendChild(o);
+  });
+  document.getElementById("copyTpl").addEventListener("click", function () {
+    var src = document.getElementById(tplSel.value).textContent.replace(/^\n+/, "").replace(/\s+$/, "");
+    if (!lastAll) { alert("没有可复制的数据"); return; }
+    copy(src.replace("(取模结果)", lastAll.split("\n").join("\n   ")));
+  });
+
   updateHint();
   render();
 })();
@@ -328,6 +355,64 @@ const HZK_LEN = 261696;
   if(ios && !window.navigator.standalone && !localStorage.getItem("iosTipClosed")) tip.hidden=false;
   x.addEventListener("click",function(){ tip.hidden=true; localStorage.setItem("iosTipClosed","1"); });
 })();
+</script>
+
+<script type="text/plain" id="tpl51scan">
+#include <reg51.h>
+#define uchar unsigned char
+#define uint  unsigned int
+#define out0 P0          /* 左 8 列，0 点亮 */
+#define out2 P2          /* 右 8 列，0 点亮 */
+#define out1 P1          /* 行扫描 */
+/* ============ 参数区 ============ */
+#define CHAR_BYTES   32  /* 每个字固定 32 字节 */
+#define SCAN_DELAY    2  /* 每行点亮延时 1~4 */
+#define HOLD_FRAMES  40  /* 每个字停留的扫描帧数，越大停得越久 */
+/* ================================ */
+/* ---- 字模：整段替换即可，字数自动统计 ---- */
+uchar code font[] = {
+   (取模结果)
+};
+#define CHAR_NUM ((uint)(sizeof(font) / CHAR_BYTES))   /* 字数自动统计 */
+void delay(uint j)
+{
+    uchar i;
+    while (j--)
+    {
+        i = 200;
+        while (--i);
+    }
+}
+/* 静态显示第 idx 个字 */
+void show(uchar idx)
+{
+    uchar r, n;
+    uint base;
+    base = (uint)idx * CHAR_BYTES;
+    for (n = 0; n < HOLD_FRAMES; n++)
+    {
+        for (r = 0; r < 16; r++)
+        {
+            out0 = 0xFF;                       /* 先消隐，防重影 */
+            out2 = 0xFF;
+            out1 = r;                          /* 选行 */
+            out0 = font[base + (uint)r * 2];       /* 左 8 列 */
+            out2 = font[base + (uint)r * 2 + 1];   /* 右 8 列 */
+            delay(SCAN_DELAY);
+        }
+    }
+    out0 = 0xFF;
+    out2 = 0xFF;
+}
+void main(void)
+{
+    uint c;
+    while (1)
+    {
+        for (c = 0; c < CHAR_NUM; c++)
+            show((uchar)c);
+    }
+}
 </script>
 </body>
 </html>
